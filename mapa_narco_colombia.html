@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Mapa de Coca y Marihuana en Colombia</title>
+	<link rel="icon" href="html-5.png" type="image/png">
+	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+</head>
+
+<body>
+	<div class="loading-overlay" id="loadingOverlay">
+		<div class="loading-spinner"></div>
+		<p>Cargando datos del mapa...</p>
+	</div>
+
+	<div class="container">
+		<header>
+			<h1><i class="fas fa-map-marked-alt"></i> Mapa de Coca y Marihuana en Colombia</h1>
+			<p class="subtitle">Visualización de cultivos de coca, marihuana, incidentes violentos y rutas de tráfico -
+				Datos 2020-2023</p>
+
+			<p class="nombres">
+				Mapa realizado por: Marco Yoanis Hurtado Restrepo, Erika Muños Gonzales & Juan Andres Piedrahita
+				Gonzales
+			</p>
+		</header>
+
+		<!-- Agregar esto después del último control-group existente -->
+		<div class="control-group">
+			<h3><i class="fas fa-palette"></i> Tema</h3>
+			<div class="theme-toggle">
+				<button class="theme-btn" id="darkModeToggle">
+					<i class="fas fa-moon"></i> Modo Oscuro
+				</button>
+			</div>
+		</div>
+
+		<div class="dashboard">
+			<div class="controls-panel">
+				<div class="control-group">
+					<h3><i class="fas fa-layer-group"></i> Capas de Visualización</h3>
+					<div class="checkbox-group">
+						<div class="checkbox-item">
+							<input type="checkbox" id="show-coca" checked>
+							<label for="show-coca">Cultivos de Coca</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="show-marihuana" checked>
+							<label for="show-marihuana">Cultivos de Marihuana</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="show-routes" checked>
+							<label for="show-routes">Rutas de Tráfico</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="show-violence" checked>
+							<label for="show-violence">Zonas de Violencia</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="show-ports" checked>
+							<label for="show-ports">Puertos de Salida</label>
+						</div>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<h3><i class="fas fa-filter"></i> Filtros Avanzados</h3>
+					<div class="checkbox-group">
+						<div class="checkbox-item">
+							<input type="checkbox" id="filter-violence-high">
+							<label for="filter-violence-high">Alta violencia (>150 incidentes)</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="filter-hectares-large">
+							<label for="filter-hectares-large">Grandes cultivos (>10,000 ha)</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="filter-labs-multiple">
+							<label for="filter-labs-multiple">Múltiples laboratorios (>3)</label>
+						</div>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<h3><i class="fas fa-fire"></i> Mapas de Calor Múltiples</h3>
+					<div class="checkbox-group">
+						<div class="checkbox-item">
+							<input type="checkbox" id="heatmap-coca" class="heatmap-checkbox">
+							<label for="heatmap-coca">Cultivos de Coca</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="heatmap-marihuana" class="heatmap-checkbox">
+							<label for="heatmap-marihuana">Cultivos de Marihuana</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="heatmap-violence" class="heatmap-checkbox">
+							<label for="heatmap-violence">Incidentes de Violencia</label>
+						</div>
+						<div class="checkbox-item">
+							<input type="checkbox" id="heatmap-labs" class="heatmap-checkbox">
+							<label for="heatmap-labs">Laboratorios</label>
+						</div>
+					</div>
+
+					<div class="heatmap-intensity">
+						<label for="heatmap-intensity">Intensidad:</label>
+						<input type="range" id="heatmap-intensity" min="1" max="10" value="5">
+					</div>
+
+					<div class="heatmap-combination">
+						<i class="fas fa-lightbulb"></i> Puedes activar múltiples mapas de calor para comparar patrones
+					</div>
+				</div>
+
+				<div class="control-group">
+					<h3><i class="fas fa-sliders-h"></i> Controles de Capa</h3>
+					<div class="layer-controls">
+						<button class="layer-btn active" data-action="show-all">Mostrar Todo</button>
+						<button class="layer-btn" data-action="hide-all">Ocultar Todo</button>
+						<button class="layer-btn" data-action="reset-view">Vista Inicial</button>
+						<button class="layer-btn" data-action="show-coca-only">Solo Coca</button>
+						<button class="layer-btn" data-action="show-marihuana-only">Solo Marihuana</button>
+						<button class="layer-btn" id="compare-btn">Comparar Regiones</button>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<h3><i class="fas fa-info-circle"></i> Información</h3>
+					<p style="font-size: 0.9rem; line-height: 1.5; color: #7f8c8d;">
+						Este mapa muestra datos estimados sobre cultivos de coca, marihuana, violencia relacionada y
+						rutas de narcotráfico en Colombia.
+						Los datos son representativos y se basan en informes oficiales y análisis de expertos.
+					</p>
+				</div>
+			</div>
+
+			<div class="map-wrapper">
+				<div class="search-panel">
+					<input type="text" class="search-input" id="searchInput"
+						placeholder="Buscar por municipio o departamento...">
+					<ul class="search-results" id="searchResults"></ul>
+				</div>
+
+				<div class="export-controls">
+					<button class="export-btn" id="exportPNG">
+						<i class="fas fa-camera"></i> Captura
+					</button>
+					<button class="export-btn" id="exportData">
+						<i class="fas fa-download"></i> Datos
+					</button>
+				</div>
+
+				<div id="map"></div>
+				<div class="legend">
+					<h4><i class="fas fa-key"></i> Leyenda</h4>
+					<div class="legend-item">
+						<div class="legend-color" style="background-color: #e74c3c;"></div>
+						<div class="legend-text">Coca</div>
+					</div>
+					<div class="legend-item">
+						<div class="legend-color" style="background-color: #27ae60;"></div>
+						<div class="legend-text">Marihuana</div>
+					</div>
+					<div class="legend-item">
+						<div class="legend-color" style="background-color: #3498db;"></div>
+						<div class="legend-text">Rutas</div>
+					</div>
+					<div class="legend-item">
+						<div class="legend-color" style="background-color: #f39c12;"></div>
+						<div class="legend-text">Violencia</div>
+					</div>
+					<div class="legend-item">
+						<div class="legend-color" style="background-color: #9b59b6;"></div>
+						<div class="legend-text">Puertos</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="comparison-panel" id="comparisonPanel">
+			<div class="comparison-header">
+				<h3><i class="fas fa-balance-scale"></i> Comparación de Regiones</h3>
+				<button class="close-comparison" id="closeComparison">&times;</button>
+			</div>
+			<div class="comparison-content" id="comparisonContent">
+			</div>
+		</div>
+
+		<h2 class="section-title"><i class="fas fa-chart-bar"></i> Estadísticas Principales</h2>
+		<div class="stats-panel">
+			<div class="stat-card">
+				<div class="stat-icon">
+					<i class="fas fa-leaf"></i>
+				</div>
+				<div class="stat-value" id="total-coca">204,650</div>
+				<div class="stat-label">Hectáreas de Coca (2023)</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon">
+					<i class="fas fa-cannabis"></i>
+				</div>
+				<div class="stat-value" id="total-marihuana">8,420</div>
+				<div class="stat-label">Hectáreas de Marihuana (2023)</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon">
+					<i class="fas fa-skull-crossbones"></i>
+				</div>
+				<div class="stat-value" id="total-incidents">5,240</div>
+				<div class="stat-label">Incidentes Violentos (2023)</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon">
+					<i class="fas fa-route"></i>
+				</div>
+				<div class="stat-value" id="total-routes">18</div>
+				<div class="stat-label">Rutas Principales</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon">
+					<i class="fas fa-map-marker-alt"></i>
+				</div>
+				<div class="stat-value" id="total-locations">58</div>
+				<div class="stat-label">Puntos Críticos Mapeados</div>
+			</div>
+		</div>
+
+		<div class="info-panel">
+			<h3><i class="fas fa-chart-pie"></i> Comparación Coca vs Marihuana</h3>
+			<div class="drug-comparison">
+				<div class="drug-card coca-card">
+					<h4><i class="fas fa-leaf" style="color: #e74c3c;"></i> Cultivos de Coca</h4>
+					<div class="drug-stats">
+						<div class="drug-stat">
+							<div class="drug-value">72%</div>
+							<div class="drug-label">Del total de cultivos ilícitos</div>
+						</div>
+						<div class="drug-stat">
+							<div class="drug-value">$1.2B</div>
+							<div class="drug-label">Valor estimado anual</div>
+						</div>
+						<div class="drug-stat">
+							<div class="drug-value">18</div>
+							<div class="drug-label">Departamentos afectados</div>
+						</div>
+						<div class="drug-stat">
+							<div class="drug-value">85%</div>
+							<div class="drug-label">Exportado</div>
+						</div>
+					</div>
+				</div>
+				<div class="drug-card marihuana-card">
+					<h4><i class="fas fa-cannabis" style="color: #27ae60;"></i> Cultivos de Marihuana</h4>
+					<div class="drug-stats">
+						<div class="drug-stat">
+							<div class="drug-value">28%</div>
+							<div class="drug-label">Del total de cultivos ilícitos</div>
+						</div>
+						<div class="drug-stat">
+							<div class="drug-value">$380M</div>
+							<div class="drug-label">Valor estimado anual</div>
+						</div>
+						<div class="drug-stat">
+							<div class="drug-value">12</div>
+							<div class="drug-label">Departamentos afectados</div>
+						</div>
+						<div class="drug-stat">
+							<div class="drug-value">60%</div>
+							<div class="drug-label">Mercado interno</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="info-panel">
+			<h3><i class="fas fa-info-circle"></i> Análisis de Rutas Principales</h3>
+			<div class="info-content">
+				<div class="route-info">
+					<h4><i class="fas fa-water"></i> Ruta del Pacífico</h4>
+					<p>Conecta <span class="highlight">Nariño, Cauca y Valle del Cauca</span> con puertos de salida en
+						<span class="highlight">Buenaventura y Tumaco</span>. Principal destino: Centroamérica.
+					</p>
+				</div>
+				<div class="route-info">
+					<h4><i class="fas fa-border-all"></i> Ruta de la Frontera</h4>
+					<p>Desde <span class="highlight">Norte de Santander y Arauca</span> hacia Venezuela. Usada para
+						transporte terrestre y conexión con rutas caribeñas.</p>
+				</div>
+				<div class="route-info">
+					<h4><i class="fas fa-tree"></i> Ruta Amazónica</h4>
+					<p>Desde <span class="highlight">Putumayo, Caquetá y Amazonas</span> hacia Brasil y Perú a través de
+						la red fluvial.</p>
+				</div>
+				<div class="route-info">
+					<h4><i class="fas fa-ship"></i> Ruta del Caribe</h4>
+					<p>Desde <span class="highlight">Magdalena, Bolívar y La Guajira</span> hacia el Caribe y rutas
+						transatlánticas a Europa y África.</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="data-source">
+			<p><i class="fas fa-database"></i> Fuentes: UNODC (Monitoreo de Cultivos 2020-2023), Policía Nacional de
+				Colombia, Indepaz, InSight Crime, SIMCI, y análisis propios basados en datos abiertos.</p>
+		</div>
+	</div>
+
+
+
+	<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+	<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<script src="data.js"></script>
+	<script src="app.js"></script>
+</body>
+
+</html>
